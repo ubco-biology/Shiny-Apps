@@ -9,6 +9,9 @@ library(DT)
 library(ggmosaic)
 library(palmerpenguins)
 
+library(car)
+library(shinyBS)
+
 
 #make some factors
 #easier to let ggplot2 control plotting (color, fill) based on type
@@ -30,20 +33,20 @@ mtcars<-map_if(mtcars,uvals<4,as.factor) %>%
 # title ----
 header <- dashboardHeader(
     title = "BIOL 116 App"
-
+    
 )
 
 # sidebar ----
 sidebar <- dashboardSidebar(
     sidebarMenu(id = "sidebarid",
-        
+                
                 br(),
                 menuItem("Welcome", tabName = "welcome", icon = icon("dashboard")),
                 
                 # Horizontal line ----
                 tags$hr(),
                 
-                menuItem("Upload Data", tabName = "input_data", icon = icon("table")),
+                menuItem("Choose Data", tabName = "input_data", icon = icon("table")),
                 conditionalPanel(
                     condition = 'input.sidebarid == "input_data"',
                     
@@ -62,7 +65,12 @@ sidebar <- dashboardSidebar(
                                  choices = c(Semicolon = ";",
                                              Comma = ",",
                                              Tab = "\t"),
-                                 selected = ",")
+                                 selected = ","),
+                    
+                    # Input: Select which data to display
+                    selectInput("dataset","Choose Data to Use:",
+                                choices =list(penguins = "penguins", mtcars = "mtcars",
+                                              uploaded_file = "inFile"), selected=NULL),
                 ),
                 
                 
@@ -73,22 +81,17 @@ sidebar <- dashboardSidebar(
                 conditionalPanel(
                     condition = 'input.sidebarid == "plot"',
                     
-                    # Input: Select which data to display
-                    selectInput("dataset","Data:",
-                                choices =list(penguins = "penguins", mtcars = "mtcars",
-                                              uploaded_file = "inFile"), selected=NULL),
-                    
                     # Input: Select which x variable to display
                     selectInput("x_var", "X Variable:", choices=NULL),
                     
                     # Input: Select class of x variable
-                    radioButtons("class_x", label = "Choose Class of X Variable:", choices = list(Quantitative = "Continuous", Categorical = "Categorical"), selected = ""),
+                    radioButtons("class_x", label = "Choose the X Variable's Data Type:", choices = list(Quantitative = "Continuous", Categorical = "Categorical"), selected = ""),
                     
                     # Input: Select which y variable to display
                     selectInput("y_var", "Y Variable:", choices=NULL),
                     
                     # Input: Select class of y variable
-                    radioButtons("class_y", label = "Choose Class of Y Variable:", choices = list(Quantitative = "Continuous", Categorical = "Categorical"), selected = ""),
+                    radioButtons("class_y", label = "Choose the Y Variable's Data Type:", choices = list(Quantitative = "Continuous", Categorical = "Categorical"), selected = ""),
                     
                     # Input: Select type of plot based on x&y variable class chosen (except for continuous/continuous or categorical/categorical -> no choice; will be scatter or mosaic)
                     
@@ -103,14 +106,15 @@ sidebar <- dashboardSidebar(
                     conditionalPanel(
                         condition = "input.class_x == 'Categorical' && input.class_y == 'Continuous' && input.both_plots == 'Barchart' ||
                         input.class_x == 'Continuous' && input.class_y == 'Categorical' && input.both_plots == 'Barchart'",
-                        checkboxInput("group_var", "Do you have a grouping variable?", value = FALSE)
+                        checkboxInput("group_var", "Do you have a grouping variable?", value = FALSE),
                     ),
                     
                     # Input: Select which grouping variable to display; if applicable
                     conditionalPanel(
                         condition = "input.class_x == 'Categorical' && input.class_y == 'Continuous' && input.group_var == 1 ||
                         input.class_x == 'Continuous' && input.class_y == 'Categorical' && input.group_var == 1", 
-                        selectInput("group", "Grouping Variable:", choices=NULL)),
+                        selectInput("group", "Grouping Variable:", choices=NULL),
+                    ),
                 ),
                 
                 
@@ -121,25 +125,73 @@ sidebar <- dashboardSidebar(
                 conditionalPanel(
                     condition = 'input.sidebarid == "stats"',
                     
-                    # Input: Select which data to display
-                    selectInput("stats.dataset","Data:",
-                                choices =list(penguins = "penguins", mtcars = "mtcars",
-                                              uploaded_file = "inFile"), selected=NULL),
-                    
                     # Input: Select which variable to display
                     selectInput("var1", "Variable 1:", choices=NULL),
                     
                     # Input: Select class of variable 1
-                    radioButtons("class1", label = "Choose Class of Variable 1:", choices = list(Quantitative = "Quantitative", Categorical = "Categorical")
-                                 , selected = ""),
+                    radioButtons("class1", label = "Choose Class of Variable 1:", choices = list(Quantitative = "Quantitative", Categorical = "Categorical"), selected = ""),
                     
                     # Input: Select which variable to display
                     selectInput("var2", "Variable 2:", choices=NULL),
                     
                     # Input: Select class of variable 2
-                    radioButtons("class2", label = "Choose Class of Variable 2:", choices = list(Quantitative = "Quantitative", Categorical = "Categorical"))
+                    radioButtons("class2", label = "Choose Class of Variable 2:", choices = list(Quantitative = "Quantitative", Categorical = "Categorical")),
+                ),
+                
+                # Horizontal line ----
+                tags$hr(),
+                
+                menuItem("Analysis", tabName = "analysis", icon = icon("cog")),
+                conditionalPanel(
+                    condition = 'input.sidebarid == "analysis"',
+                    
+                    # Variable selection
+                    selectInput("response.var", "Choose the response variable", choices=NULL),
+                    
+                    # Input: Select class of response variable
+                    radioButtons("classr", label = "Choose Class of Response Variable:", choices = list(Quantitative = "Quantitative", Categorical = "Categorical"), selected = ""),
+                    
+                    selectInput("independent.var", "Choose the independent variable", choices=NULL),
+                    
+                    # Input: Select class of Independent variable
+                    radioButtons("classi", label = "Choose Class of Independent Variable:", choices = list(Quantitative = "Quantitative", Categorical = "Categorical"), selected = ""),
+                    
+                    conditionalPanel(
+                        condition = 'input.sidebarid == "analysis" && input.classr == "Quantitative" && input.classi == "Categorical"',
+                        
+                        # Choosing number of groups in categorical variable
+                        radioButtons("categories", label = "How many groups/categories does your categorical variable have?", choices=list(two = "two", more.than.two = "more.than.two"), selected = ""),
+                    ),
+                    
+                    conditionalPanel(
+                        condition = 'input.sidebarid == "analysis" && input.classr == "Categorical" && input.classi == "Categorical"',
+                        
+                        # Choosing number of groups in categorical variable
+                        radioButtons("categories2", label = "Do either of your categorical variables have more than two groups/categories?", choices=list(yes = "yes", no = "no"), selected = ""),
+                    ),
+                    
+                    conditionalPanel(
+                        condition = 'input.sidebarid == "analysis" && input.classr == "Quantitative" && input.classi == "Categorical" && input.categories == "two"',
+                        
+                        tags$strong("Two Sample T-test Options"),
+                        br(),
+                        
+                        # Choosing a confidence level
+                        numericInput("conf",
+                                     label = "Please select a confidence level:",
+                                     value = 0.95,
+                                     min = 0.8,
+                                     max = 0.99),
+                        
+                        # Choosing equal variance or not
+                        radioButtons("varequal", label = "Do the two samples have equal variance?", choices=list(yes = "yes", no = "no"), selected = "")
+                        
                     )
-            
+                    
+                )
+                
+                
+                
     )
     
 )
@@ -149,19 +201,23 @@ body <- dashboardBody(
     tabItems(
         tabItem(tabName = "welcome",
                 box(title = "Welcome!", solidHeader = TRUE, width = NULL, status = "info",
-                    tags$div("This shiny app was created as part of an Open Education Resource for students at the University of British Columbia. The goal was to create an app that simplifies data analysis in Biology labs for students with minimal statistics/coding experience, while maintaining Open Science principles such as reproducibility. To enhance reproducibility, all of the R script used to generate the plots and descriptive statistics is displayed alongside the outputs."),
+                    tags$div("This shiny app was created as part of an Open Education Resource for students at the University of British Columbia. The goal was to create an app that simplifies data analysis in Biology labs for students with minimal statistics/coding experience, while maintaining Open Science principles such as reproducibility. To enhance reproducibility, all of the R script used to generate plots, descriptive statistics, and any analyses are displayed alongside the outputs."),
                     br(),
-                    tags$strong("Choose or upload a dataset:"),
+                    tags$strong("Step 1: Choose or upload a dataset"),
                     br(),
-                    tags$div("You can upload your own dataset following the instructions under the Upload Data tab. Alternatively, both the mtcars and penguins datasets from the base and palmerpenguins package in R are available for use in this app."),
+                    tags$div("You can upload your own dataset following the instructions under the Choose Data tab. Alternatively, both the mtcars and penguins datasets from the base and palmerpenguins package in R are available for use in this app."),
                     br(),
-                    tags$strong("Create a plot:"),
+                    tags$strong("Step 2: Create a plot"),
                     br(),
                     tags$div("Follow the instructions under the Plot tab to visualize your data and save a copy of your new plot."),
                     br(),
-                    tags$strong("Calculate descriptive statistics:"),
+                    tags$strong("Step 3: Calculate descriptive statistics"),
                     br(),
-                    tags$div("Follow the instructions under the Descriptive Stats tab to calculate statstics for selected variables from your dataset based on their class (ie. quantitative - discrete or continuous, categorical - nominal or ordinal)."),
+                    tags$div("Follow the instructions under the Descriptive Stats tab to calculate statstics for selected variables from your dataset based on their type (ie. quantitative - discrete or continuous, categorical - nominal or ordinal)."),
+                    br(),
+                    tags$strong("Step 4: Perform statistical analyses"),
+                    br(),
+                    tags$div("Follow the instructions under the Analysis tab to perform statistical tests using your selected data. The type of test performed depends on the types of variables in your dataset.")
                 ),
         ),
         tabItem(tabName = "input_data",
@@ -184,36 +240,31 @@ body <- dashboardBody(
         tabItem(tabName = "plot",
                 fluidRow(
                     box(title = "Instructions", width = 4, solidHeader = TRUE, status = "success", 
-                        tags$strong("Select a dataset"),
-                        tags$div("Both the mtcars and penguins datasets are loaded into this app. Alternatively, you can upload your own dataset under the Upload Data tab. To see a description of the mtcars dataset", tags$a("click here.", href = "https://www.rdocumentation.org/packages/datasets/versions/3.6.2/topics/mtcars"), "To see a description of the penguins dataset", tags$a("click here.", href = "https://www.rdocumentation.org/packages/palmerpenguins/versions/0.1.0")),
-                        br(),
                         tags$strong("To create and save a plot"),
                         tags$ol(
                             tags$li("Choose the x variable"), 
-                            tags$li("Choose the type/class of the x variable"),
+                            tags$li("Choose the data type of the x variable"),
                             tags$li("Choose the y variable"), 
-                            tags$li("Choose the type/class of the y variable"),
+                            tags$li("Choose the data type of the y variable"),
                             tags$li("Depending on your choices for the above, you may be prompted to choose the type of plot you'd like to create"),
                             tags$li("To save a copy of your plot, click the Download Plot button"),
                         ),
                         tags$strong("NOTE:"),
                         tags$div("If you would like to create a grouped bar chart:"),
-                        tags$ol(
+                        tags$ul(
                             tags$li("Both the x variable and the grouping variable should be categorical (nominal or ordinal)"),
                             tags$li("The y variable should be continuous (ie. frequency or count data)"),
                         ),
-                        br(),
-                        tags$strong("Source Code:"),
-                        tags$div("The source code shows you the R script that is used to generate your plot."),
-                        ),
+                    ),
                     box(title = "Plot", width = 8, solidHeader = TRUE, status = "info",
                         plotOutput("p"),
                         br(),
                         downloadButton('downloadPlot', 'Download Plot'),
-                        ),
+                    ),
                 ),
                 fluidRow(
                     box(title = "Source Code", solidHeader = TRUE, width = 12, status = "warning", 
+                        tags$div("The source code shows you the R script that is used to generate your plot."),
                         verbatimTextOutput("plot_source_code")
                     ),
                 ),
@@ -221,16 +272,9 @@ body <- dashboardBody(
         tabItem(tabName = "stats",
                 fluidRow(
                     box(title = "Instructions", width = 4, solidHeader = TRUE, status = "success", 
-                        tags$strong("To calculate descriptive statistics"),
-                        tags$ol(
-                            tags$li("Choose a dataset from the Data dropdown menu"), 
-                            tags$li("Select your first variable from the 'Variable 1' dropdown menu"), 
-                            tags$li("Choose the type/class of variable 1"),
-                            tags$li("Select a second variable from the 'Variable 2' dropdown menu"), 
-                            tags$li("Choose the type/class of variable 2"),
-                        ),
-                        tags$div("Descriptive statistics will automatically be generated for the two variables chosen. The descriptive statistics displayed are based on the class/type of variables you selected."),
-                        br(),
+                        tags$div("Descriptive statistics will automatically be generated for the two variables chosen. The descriptive statistics displayed are based on the data type of variables you selected (quantitative or categorical)."),
+                    ),
+                    box(title = "Descriptive Statistics", solidHeader = TRUE, width = 8, status = "info",
                         tags$strong("Interpreting the Output"),
                         br(),
                         tags$em("For two quantitative variables (discrete or continuous)"),
@@ -247,22 +291,67 @@ body <- dashboardBody(
                         tags$ul(
                             tags$li("A table showing the frequencies (counts) of each group is displayed."),
                         ),
-                        tags$div(""),
                         br(),
-                        tags$strong("Source Code:"),
-                        tags$div("The source code shows you the R script that is used to generate the descriptive statistics for the chosen variables."),
-                        ),
-                    box(title = "Descriptive Statistics", solidHeader = TRUE, width = 8, status = "info",
+                        tags$strong("Descriptive Statistics Output for Your Variables"),
                         verbatimTextOutput("stats"),
-                        ),
+                    ),
                 ),
                 fluidRow(
                     box(title = "Source Code", solidHeader = TRUE, width = 12, status = "warning", 
-                        verbatimTextOutput("stats_source_code")
-                        )
+                        tags$div("The source code shows you the R script that is used to generate the descriptive statistics for the chosen variables."),
+                        verbatimTextOutput("stats_source_code"),
+                    ),
+                ),
+                
+        ),
+        tabItem(tabName = "analysis",
+                fluidRow(
+                    box(title = "Instructions", width = 4, solidHeader = TRUE, status = "success", 
+                        tags$div("Statistical tests will be automatically performed based on your selection of variables and their data types. The type of analysis performed depends on the type of data you have."),
+                        br(),
+                        tags$strong("T-test"),
+                        tags$ul(
+                            tags$li("This analysis is used when examining a single quantitative (numeric) response variable in relation to a single categorical variable that has only 2 groups."),
+                            tags$li("When performing a T-test in this app, you will be asked for a few additional parameters."),
+                            tags$ul(
+                                tags$li("Type in the confidence level you would like to use for the T-test. For example, if you'd like a 95% confidence interval, type in 0.95."),
+                                tags$li("One assumption of the T-test is that the variance for each sample is approximately equal. However, the t-test used by this app (Welch's t-test) is somewhat robust to deviations in this assumption. For now, we will assume that both of your samples have equal variance. As such, please select 'Yes' when prompted for this option."),
+                            ),
+                        ),
+                        br(),
+                        tags$strong("ANOVA"),
+                        tags$ul(
+                            tags$li("This analysis is used when examining a single quantitative (numeric) response variable in relation to a single categorical variable that has more than 2 groups."),
+                        ),
+                        br(),
+                        tags$strong("Fisher's exact test"),
+                        tags$ul(
+                            tags$li("This analysis is used when testing for an association between two categorical variables. It is only used when both categorical variables have exactly 2 levels/groups. For example, if one variable is sex (male/female) and the other is survival (yes/no)."),
+                        ),
+                        br(),
+                        tags$strong("Chi-square contingency analysis"),
+                        tags$ul(
+                            tags$li("This analysis is used when testing for an association between two categorical variables. It is only used when at least one of the categorical variables has more than 2 levels/groups. For example, if one variable is flower colour (pink/red/white) and the other is season (spring/summer/winter/fall)."),
+                        ),
+                        
+                    ),
+                    box(title = "Analysis Results", solidHeader = TRUE, width = 8, status = "info",
+                        bsAlert("alert"),
+                        tags$strong("Interpreting the Output"),
+                        br(),
+                        htmlOutput("interpret_analysis"),
+                        br(),
+                        tags$strong("Your Analysis Results"),
+                        verbatimTextOutput("analysis"),
+                    ),
+                ),
+                fluidRow(
+                    box(title = "Source Code", solidHeader = TRUE, width = 12, status = "warning", 
+                        tags$div("The source code shows you the R script that is used to perform the statistical analysis on the selected variables."),
+                        verbatimTextOutput("analysis_source_code")
+                    )
                 )
-        
-    )
+        )
     )
 )
 
@@ -277,13 +366,13 @@ server <-  function(input, output, session) {
     observe({
         if(!exists(input$dataset)) return() #make sure upload exists
         var.opts<-colnames(get(input$dataset))
-        if(!exists(input$stats.dataset)) return() #make sure upload exists
-        var.opts2<-colnames(get(input$stats.dataset))
         updateSelectInput(session, "x_var", choices = var.opts)
         updateSelectInput(session, "y_var", choices = var.opts)
         updateSelectInput(session, "group", choices = var.opts)
-        updateSelectInput(session, "var1", choices = var.opts2)
-        updateSelectInput(session, "var2", choices = var.opts2)
+        updateSelectInput(session, "var1", choices = var.opts)
+        updateSelectInput(session, "var2", choices = var.opts)
+        updateSelectInput(session, "response.var", choices = var.opts)
+        updateSelectInput(session, "independent.var", choices = var.opts)
     })
     
     #get data object
@@ -340,7 +429,7 @@ server <-  function(input, output, session) {
             inFile
         })
     })
-
+    
     
     
     #plotting function using ggplot2
@@ -370,7 +459,7 @@ server <-  function(input, output, session) {
                            position = 'jitter') +
                 .theme +
                 labs(x 		= input$x_var,
-                    y 		= input$y_var)
+                     y 		= input$y_var)
         }
         
         else if(input$class_x == "Categorical" && input$class_y == "Continuous" && input$both_plots == "Barchart" && input$group_var == 1 ||
@@ -385,8 +474,8 @@ server <-  function(input, output, session) {
                          position = "dodge") + 
                 .theme +
                 labs(fill 	= input$group,
-                    x 		= input$x_var,
-                    y 		= input$y_var)
+                     x 		= input$x_var,
+                     y 		= input$y_var)
         } 
         
         else if(input$class_x == "Categorical" && input$class_y == "Continuous" && input$both_plots == "Barchart" ||
@@ -411,10 +500,10 @@ server <-  function(input, output, session) {
                        fill 	= plot.obj$y_var)) + 
                 geom_mosaic(aes(x = product(!!sym(plot.obj$x_var)), fill = !!sym(plot.obj$y_var))) +
                 .theme +
-            labs(
-                fill 	= input$y_var,
-                x 		= input$x_var,
-                y 		= input$y_var)
+                labs(
+                    fill 	= input$y_var,
+                    x 		= input$x_var,
+                    y 		= input$y_var)
         } 
         
         else if(input$class_x == "Categorical" && input$class_y == "Continuous" && input$both_plots == "Boxplot" ||
@@ -426,7 +515,7 @@ server <-  function(input, output, session) {
                 geom_boxplot(fill = "lightgrey") +
                 .theme +
                 labs(x 		= input$x_var,
-                    y 		= input$y_var)
+                     y 		= input$y_var)
         }
         
         else if(input$class_x == "Categorical" && input$class_y == "Continuous" && input$both_plots == "Stripchart" ||
@@ -448,7 +537,7 @@ server <-  function(input, output, session) {
                              position = position_nudge(x = 0.15)) +
                 .theme +
                 labs(x 		= input$x_var,
-                    y 		= input$y_var)
+                     y 		= input$y_var)
         }
         
     })
@@ -473,7 +562,7 @@ server <-  function(input, output, session) {
         req(input$x_var, input$class_x, input$y_var, input$class_y)
         
         if(input$class_x == "Continuous" && input$class_y == "Continuous") {
-"library(ggplot2)
+            "library(ggplot2)
             
 ggplot(data, 
     aes(x = x_var, y = y_var)) + 
@@ -482,10 +571,10 @@ ggplot(data,
     axis.line = element_line(colour = 'gray', size = .75) +
     panel.background = element_blank() +
     plot.background = element_blank())"
-            }
+        }
         
         else if(input$class_x == "Categorical" && input$class_y == "Continuous" && input$both_plots == "Barchart") {
-"library(ggplot2)
+            "library(ggplot2)
 
 ggplot(data, 
     aes(x = x_var, y = y_var, fill = group)) + 
@@ -494,10 +583,10 @@ ggplot(data,
     axis.line = element_line(colour = 'gray', size = .75) +
     panel.background = element_blank() +
     plot.background = element_blank())"
-            } 
+        } 
         
         else if(input$class_x == "Categorical" && input$class_y == "Categorical") {
-"library(ggplot2)
+            "library(ggplot2)
 library(ggmosaic)
 
 ggplot(data, 
@@ -507,11 +596,11 @@ ggplot(data,
     axis.line = element_line(colour = 'gray', size = .75) +
     panel.background = element_blank() +
     plot.background = element_blank())"
-            } 
+        } 
         
         else if(input$class_x == "Categorical" && input$class_y == "Continuous" && input$both_plots == "Boxplot" ||
                 input$class_x == "Continuous" && input$class_y == "Categorical" && input$both_plots == "Boxplot") {
-"library(ggplot2)
+            "library(ggplot2)
 
 ggplot(data, 
     aes(x = x_var, y = y_var)) + 
@@ -520,11 +609,11 @@ ggplot(data,
     axis.line = element_line(colour = 'gray', size = .75) +
     panel.background = element_blank() +
     plot.background = element_blank())"
-            }
+        }
         
         else if(input$class_x == "Categorical" && input$class_y == "Continuous" && input$both_plots == "Stripchart" ||
                 input$class_x == "Continuous" && input$class_y == "Categorical" && input$both_plots == "Stripchart") {
-"library(ggplot2)
+            "library(ggplot2)
 
 ggplot(data, 
     aes(x = x_var, y = y_var)) + 
@@ -535,7 +624,7 @@ ggplot(data,
     axis.line = element_line(colour = 'gray', size = .75) +
     panel.background = element_blank() +
     plot.background = element_blank())"
-            }
+        }
         
     })
     
@@ -547,11 +636,11 @@ ggplot(data,
     stats <- reactive({ 
         
         #suppress error messages
-        req(input$stats.dataset, input$var1, input$class1, input$var2, input$class2)
+        req(input$dataset, input$var1, input$class1, input$var2, input$class2)
         
         if(input$class1 == "Quantitative" && input$class2 == "Quantitative"){
             
-            var1 <- get(input$stats.dataset)%>%
+            var1 <- get(input$dataset)%>%
                 select(input$var1, input$var2)%>%
                 summarise(n = n(),
                           mean = mean(get(input$var1), na.rm = T), 
@@ -559,7 +648,7 @@ ggplot(data,
                           median = median(get(input$var1), na.rm = T),
                           iqr = IQR(get(input$var1), na.rm = T))
             
-            var2 <- get(input$stats.dataset)%>%
+            var2 <- get(input$dataset)%>%
                 select(input$var1, input$var2)%>%
                 summarise(n = n(),
                           mean = mean(get(input$var2), na.rm = T), 
@@ -567,30 +656,30 @@ ggplot(data,
                           median = median(get(input$var2), na.rm = T),
                           iqr = IQR(get(input$var2), na.rm = T))
             
-        q <- full_join(var1, var2)
-        q
+            q <- full_join(var1, var2)
+            q
             
-        
+            
         }
         
         else if(input$class1 == "Quantitative" && input$class2 == "Categorical"){
             
-        q <- get(input$stats.dataset)%>%
-            select(input$var1, input$var2)%>%
-            group_by(!!sym(input$var2)) %>% 
-            summarise(n = n(),
-                      mean = mean(get(input$var1), na.rm = T), 
-                      sd = sd(get(input$var1), na.rm = T),
-                      median = median(get(input$var1), na.rm = T),
-                      iqr = IQR(get(input$var1), na.rm = T))
-        q
+            q <- get(input$dataset)%>%
+                select(input$var1, input$var2)%>%
+                group_by(!!sym(input$var2)) %>% 
+                summarise(n = n(),
+                          mean = mean(get(input$var1), na.rm = T), 
+                          sd = sd(get(input$var1), na.rm = T),
+                          median = median(get(input$var1), na.rm = T),
+                          iqr = IQR(get(input$var1), na.rm = T))
+            q
             
-        
+            
         }
         
         else if(input$class1 == "Categorical" && input$class2 == "Quantitative"){
             
-            q <- get(input$stats.dataset)%>%
+            q <- get(input$dataset)%>%
                 select(input$var1, input$var2)%>%
                 group_by(!!sym(input$var1)) %>% 
                 summarise(n = n(),
@@ -603,26 +692,26 @@ ggplot(data,
         }
         
         else if(input$class1 == "Categorical" && input$class2 == "Categorical"){
-          
-        q <- select(get(input$stats.dataset), input$var1, input$var2)
-        table(q)
+            
+            q <- select(get(input$dataset), input$var1, input$var2)
+            table(q)
         }
         
     })
     
     output$stats <- renderPrint({stats()})
-        
+    
     
     # showing source code for descriptive statistics table
     
     output$stats_source_code <- renderText({
         
         #suppress error messages
-        req(input$stats.dataset, input$var1, input$class1, input$var2, input$class2)
-
+        req(input$dataset, input$var1, input$class1, input$var2, input$class2)
+        
         if(input$class1 == "Quantitative" && input$class2 == "Quantitative"){
             
-"library(dplyr)
+            "library(dplyr)
 
 var1 <- data %>%
          summarise(n = n(),
@@ -645,7 +734,7 @@ stats"
         
         else if(input$class1 == "Quantitative" && input$class2 == "Categorical"){
             
-"library(dplyr)
+            "library(dplyr)
 
 stats <- data %>%
           group_by(var2) %>%
@@ -661,7 +750,7 @@ stats"
         
         else if(input$class1 == "Categorical" && input$class2 == "Quantitative"){
             
-"library(dplyr)
+            "library(dplyr)
 
 stats <- data %>%
           group_by(var1) %>%
@@ -676,7 +765,7 @@ stats"
         
         else if(input$class1 == "Categorical" && input$class2 == "Categorical"){
             
-"library(dplyr)
+            "library(dplyr)
 
 stats <- data %>%
          select(var1, var2)
@@ -687,7 +776,158 @@ table(stats)"
         
     })
     
+    ## Analysis Output
+    
+    analysis <- reactive({ 
         
+        #suppress error messages
+        req(input$dataset, input$response.var, input$independent.var, input$classr, input$classi)
+        
+        if(input$classr == "Quantitative" && input$classi == "Categorical" && input$categories == "two"){
+            
+            createAlert(session, "alert", "tAlert", title = "WARNING", content = "The Two Sample T-test is run assuming that 1) each of the two samples is a random sample from its population 2) the numerical variable is normally distributed in each population 3) the variance (and thus standard deviation) of the numerical variable is the same in both populations", append = FALSE)
+            
+            req(input$conf, input$varequal, input$categories)
+            
+            conf <- input$conf
+            ve <- ifelse(input$varequal == 'yes', TRUE, FALSE)
+            
+            t.test(get(input$response.var) ~ get(input$independent.var), data = get(input$dataset), var.equal = ve, conf.level = conf)
+            
+        }
+        
+        else if(input$classr == "Quantitative" && input$classi == "Categorical" && input$categories == "more.than.two"){
+            
+            createAlert(session, "alert", "aAlert", title = "WARNING", content = "The ANOVA is run assuming that 1) the measurements in every group represent a random sample from the corresponding population 2) the Y-variable has a normal distribution in each population 3) the variance is the same in all populations (homogeneity of variance assumption)", append = FALSE)
+            
+            req(input$categories)
+            
+            lm <- lm(get(input$response.var) ~ get(input$independent.var), data = get(input$dataset)) 
+            lm.anova <- anova(lm)
+            lm.anova
+            
+        }
+        
+        else if(input$classr == "Categorical" && input$classi == "Categorical" && input$categories2 == "no"){
+            
+            req(input$categories2)
+            
+            fisher.table <- xtabs(~ get(input$response.var) + get(input$independent.var), data = get(input$dataset))
+            fisher.results <- fisher.test(fisher.table)
+            fisher.results
+            
+        }
+        
+        else if(input$classr == "Categorical" && input$classi == "Categorical" && input$categories2 == "yes"){
+            
+            req(input$categories2)
+            
+            createAlert(session, "alert", "cAlert", title = "WARNING", content = "The Chi-Square Contingency Analysis is run assuming that 1) none of the categories should have an expected frequency of less than one 2) no more than 20% of the categories should have expected frequencies less than five", append = FALSE)
+            
+            chi.table <- xtabs(~ get(input$response.var) + get(input$independent.var), data = get(input$dataset))
+            chisq.results <- chisq.test(chi.table)
+            chisq.results
+            
+            
+        }
+        
+        
+    })
+    
+    output$analysis <- renderPrint({analysis()})
+    
+    # Analysis source code
+    output$analysis_source_code <- renderText({
+        
+        req(input$dataset, input$response.var, input$independent.var, input$classr, input$classi)
+        
+        if(input$classr == "Quantitative" && input$classi == "Categorical" && input$categories == "two"){
+            
+            "t.test(response.var ~ independent.var, data = dataset, var.equal = 'TRUE', conf.level = 0.95)"
+            
+        }
+        
+        else if(input$classr == "Quantitative" && input$classi == "Categorical" && input$categories == "more.than.two"){
+            
+            "library(car)
+
+lm <- lm(response.var ~ independent.var, data = dataset) 
+lm.anova <- anova(lm)
+lm.anova"
+            
+        }
+        
+        else if(input$classr == "Categorical" && input$classi == "Categorical" && input$categories2 == "no"){
+            
+            "library(stats)
+
+fisher.table <- xtabs(~ response.var + input$independent.var, data = dataset)
+fisher.results <- fisher.test(fisher.table)
+fisher.results"
+            
+        }
+        
+        else if(input$classr == "Categorical" && input$classi == "Categorical" && input$categories2 == "yes"){
+            
+            "library(stats)
+
+chi.table <- xtabs(~ response.var + independent.var, data = dataset)
+chisq.results <- chisq.test(chi.table)
+chisq.results"
+            
+        }
+        
+    })
+    
+    output$interpret_analysis <- renderPrint({
+        
+        req(input$dataset, input$response.var, input$independent.var, input$classr, input$classi)
+        
+        if(input$classr == "Quantitative" && input$classi == "Categorical" && input$categories == "two"){
+            
+            str1 <- paste("For this course the main thing we are interested in is the p-value. First, recall the significance value you set before you began your research project. Commonly the significance level is set at 0.05. If your significance level is 0.05, this means that if the p-value you obtain is less than 0.05 there is evidence for an association between the two categorical variables. However, if the p-value is equal to or greater than 0.05, then there is no evidence to suggest an association between those two variables.")
+            
+            str2 <- paste("In the T-test output the p-value is located on the third line of output beside p-value.")
+            
+            str3 <- paste("Next, you can look at the figure you made to give more information about the direction of the relationship between those variables. For example, in an experiment investigating whether male or female chinstrap penguin differ in body mass; you might provide a statement like this: 'Based on Figure 1, male chinstrap penguins exhibit significantly greater body mass than female penguins'.")   
+            
+        }
+        
+        else if(input$classr == "Quantitative" && input$classi == "Categorical" && input$categories == "more.than.two"){
+            
+            str1 <- paste("For this course the main thing we are interested in is the p-value. First, recall the significance value you set before you began your research project. Commonly the significance level is set at 0.05. If your significance level is 0.05, this means that if the p-value you obtain is less than 0.05 there is evidence for an association between the two categorical variables. However, if the p-value is equal to or greater than 0.05, then there is no evidence to suggest an association between those two variables.")
+            
+            str2 <- paste("In the ANOVA output the p-value is located in the Pr(>F) column.")
+            
+            str3 <- paste("Next, you can look at the figure you made to give more information about the direction of the relationship between those variables. For example, in an experiment investigating whether male or female chinstrap penguin differ in body mass; you might provide a statement like this: 'Based on Figure 1, male chinstrap penguins exhibit significantly greater body mass than female penguins'.")    
+            
+            
+        }
+        
+        else if(input$classr == "Categorical" && input$classi == "Categorical" && input$categories2 == "no"){
+            
+            str1 <- paste("For this course the main thing we are interested in is the p-value. First, recall the significance value you set before you began your research project. Commonly the significance level is set at 0.05. If your significance level is 0.05, this means that if the p-value you obtain is less than 0.05 there is evidence for an association between the two categorical variables. However, if the p-value is equal to or greater than 0.05, then there is no evidence to suggest an association between those two variables.")
+            
+            str2 <- paste("In the Fisher's test output the p-value is located on the third line of output beside p-value.")
+            
+            str3 <- paste("Next, you can look at the figure you made to give more information about the direction of the relationship between those variables. For example, in an experiment investigating whether there is an association between the level of trematode parasitism and the frequency (or probability) of being eaten; you might provide a statement like this: 'Based on Figure 1, the probability of being eaten increases substantially with increasing intensity of parasitism'.")
+            
+        }
+        
+        else if(input$classr == "Categorical" && input$classi == "Categorical" && input$categories2 == "yes"){
+            
+            str1 <- paste("For this course the main thing we are interested in is the p-value. First, recall the significance value you set before you began your research project. Commonly the significance level is set at 0.05. If your significance level is 0.05, this means that if the p-value you obtain is less than 0.05 there is evidence for an association between the two categorical variables. However, if the p-value is equal to or greater than 0.05, then there is no evidence to suggest an association between those two variables.")   
+            
+            str2 <- paste("In the Chi-Square Contingency analysis output the p-value is located on the third line of output beside p-value.")
+            
+            str3 <- paste("Next, you can look at the figure you made to give more information about the direction of the relationship between those variables. For example, in an experiment investigating whether there is an association between the level of trematode parasitism and the frequency (or probability) of being eaten; you might provide a statement like this: 'Based on Figure 1, the probability of being eaten increases substantially with increasing intensity of parasitism'.")  
+        } 
+        
+        HTML(paste(str1, str2, str3, sep ='<br/><br/>'))
+        
+    })
+    
+    
     
 }
 
