@@ -1,5 +1,7 @@
 #loading packages
 library(shiny)
+#loading packages
+library(shiny)
 library(shinydashboard)
 library(dplyr)
 library(ggplot2)
@@ -8,7 +10,6 @@ library(janitor)
 library(DT)
 library(ggmosaic)
 library(palmerpenguins)
-#library(naniar)
 library(car)
 library(shinyBS)
 
@@ -16,7 +17,6 @@ library(shinyBS)
 #make some factors
 #easier to let ggplot2 control plotting (color, fill) based on type
 data(mtcars)
-data(titanic)
 uvals<-sapply(mtcars,function(x){length(unique(x))})
 mtcars<-map_if(mtcars,uvals<4,as.factor) %>%
   as.data.frame()
@@ -75,7 +75,7 @@ sidebar <- dashboardSidebar(
                 
                 # Input: Select which data to display
                 selectInput("dataset","Choose Data to Use:",
-                            choices =list(penguins = "penguins", mtcars = "mtcars", titanic = "titanic",
+                            choices =list(penguins = "penguins", mtcars = "mtcars", 
                                           uploaded_file = "inFile"), selected=NULL),
               ),
               
