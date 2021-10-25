@@ -613,18 +613,20 @@ ggplot(data) +
       var1 <- get(input$dataset)%>%
         select(input$var1, input$var2)%>%
         summarise(n = n(),
-                  Mean = mean(get(input$var1), na.rm = T), 
-                  SD = sd(get(input$var1), na.rm = T),
-                  Median = median(get(input$var1), na.rm = T),
-                  iqr = IQR(get(input$var1), na.rm = T))
+                  Mean = round(mean(get(input$var1), na.rm = T), 1),
+                  SD = round(sd(get(input$var1), na.rm = T), 2),
+                  Median = round(median(get(input$var1), na.rm = T), 1),
+                  iqr = round(IQR(get(input$var1), na.rm = T), 2)) %>%
+        as.data.frame()
       
       var2 <- get(input$dataset)%>%
         select(input$var1, input$var2)%>%
         summarise(n = n(),
-                  Mean = mean(get(input$var2), na.rm = T), 
-                  SD = sd(get(input$var2), na.rm = T),
-                  Median = median(get(input$var2), na.rm = T),
-                  iqr = IQR(get(input$var2), na.rm = T))
+                  Mean = round(mean(get(input$var2), na.rm = T), 1),
+                  SD = round(sd(get(input$var2), na.rm = T), 2),
+                  Median = round(median(get(input$var2), na.rm = T), 1),
+                  iqr = round(IQR(get(input$var2), na.rm = T), 2)) %>%
+        as.data.frame()
       
       q <- full_join(var1, var2)
       
@@ -639,12 +641,12 @@ ggplot(data) +
         select(input$var1, input$var2) %>%
         group_by(!!sym(input$var2)) %>% 
         summarise(
-              n = n(),
-              Mean = mean(get(input$var1), na.rm = T), 
-              SD = sd(get(input$var1), na.rm = T),
-              Median = median(get(input$var1), na.rm = T),
-              iqr = IQR(get(input$var1), na.rm = T)
-                  )
+          n = n(),
+          Mean = round(mean(get(input$var1), na.rm = T), 1),
+          SD = round(sd(get(input$var1), na.rm = T), 2),
+          Median = round(median(get(input$var1), na.rm = T), 1),
+          iqr = round(IQR(get(input$var1), na.rm = T), 2)) %>%
+        as.data.frame()
       
       q
       
@@ -674,16 +676,18 @@ ggplot(data) +
 
 var1 <- data %>%
          summarise(n = n(),
-                   Mean = mean(var1), na.rm = T), 
-                   SD = sd(var1), na.rm = T),
-                   Median = median(var1), na.rm = T),
-                   iqr = IQR(var1), na.rm = T))
+                   Mean = round(mean(var1, na.rm = T), 1),
+                   SD = round(sd(var1, na.rm = T),, 2),
+                   Median = round(median(var1, na.rm = T), 1),
+                   iqr = round(IQR(var1, na.rm = T), 2)) %>%
+                   as.data.frame()
 var2 <- data %>%
         summarise(n = n(),
-                  Mean = mean(var2), na.rm = T), 
-                  SD = sd(var2), na.rm = T),
-                  Median = median(var2), na.rm = T),
-                  iqr = IQR(var2), na.rm = T))
+                  Mean = round(mean(var2, na.rm = T), 1),
+                  SD = round(sd(var2, na.rm = T), 2), 
+                  Median = round(median(var2, na.rm = T), 1),
+                  iqr = round(IQR(var2, na.rm = T), 2)) %>%
+                  as.data.frame()
             
 stats <- full_join(var1, var2)
 stats"
@@ -699,11 +703,11 @@ stats <- data %>%
           group_by(var2) %>%
         summarise(
           n = n(),
-          Mean = mean(var1, na.rm = T), 
-          SD = sd(var1, na.rm = T),
-          Median = median(var1, na.rm = T),
-          iqr = IQR(var1, na.rm = T)
-        )
+          Mean = round(mean(var1, na.rm = T), 1),
+          SD = round(sd(var1, na.rm = T), 2), 
+          Median = round(median(var1, na.rm = T), 1),
+          iqr = round(IQR(var1, na.rm = T), 2)) %>%
+        as.data.frame()        
 
 stats"
       
