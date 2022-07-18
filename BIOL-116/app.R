@@ -424,10 +424,11 @@ server <-  function(input, output, session) {
     read.csv(inFile$datapath,
              header = input$header,
              sep = input$sep)
+    
   })
   
   observeEvent(input$file1,{
-    inFile<<-upload_data()
+    inFile<-upload_data()
   })
   
   # Display any inputted data 
@@ -465,6 +466,7 @@ server <-  function(input, output, session) {
         geom_point(color='black',
                    alpha=0.5, 
                    position = 'jitter') +
+        geom_smooth(method='lm') +
         .theme +
         labs(x 		= input$x_var,
              y 		= input$y_var)
@@ -489,7 +491,15 @@ server <-  function(input, output, session) {
              aes_string(
                x 		= plot.obj$x_var,
                y 		= plot.obj$y_var)) + 
-        geom_boxplot(fill = "lightgrey") +
+        geom_boxplot(width = 0.5, fill = "lightgrey") +
+        stat_summary(fun.data = confint.fun.ttest, geom = "errorbar", 
+                     colour = "black", width = 0.07, 
+                     position = position_nudge(x = 0.4)) +
+        stat_summary(fun = mean, 
+                     geom = "point", 
+                     colour = "firebrick", 
+                     size = 2, 
+                     position = position_nudge(x = 0.4)) +
         .theme +
         labs(x 		= input$x_var,
              y 		= input$y_var)
@@ -542,6 +552,7 @@ server <-  function(input, output, session) {
 ggplot(data, 
     aes(x = x_var, y = y_var)) + 
     geom_point(color = 'black', alpha = 0.5, position = 'jitter') +
+    geom_smooth(method='lm') +
     labs(x = x_var, y = y_var) +
     axis.line = element_line(colour = 'gray', size = .75) +
     panel.background = element_blank() +
@@ -565,7 +576,15 @@ ggplot(data) +
 
 ggplot(data, 
     aes(x = x_var, y = y_var)) + 
-    geom_boxplot(fill = 'lightgrey') +
+    geom_boxplot(width= 0.5, fill = 'lightgrey') +
+        stat_summary(fun.data = confint.fun.ttest, geom = 'errorbar', 
+                     colour = 'black', width = 0.07, 
+                     position = position_nudge(x = 0.4)) +
+        stat_summary(fun = mean, 
+                     geom = 'point', 
+                     colour = 'firebrick', 
+                     size = 2, 
+                     position = position_nudge(x = 0.4)) +
     labs(x = x_var, y = y_var) +
     axis.line = element_line(colour = 'gray', size = .75) +
     panel.background = element_blank() +
