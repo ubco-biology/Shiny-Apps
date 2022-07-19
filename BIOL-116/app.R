@@ -75,8 +75,7 @@ sidebar <- dashboardSidebar(
                 
                 # Input: Select which data to display
                 selectInput("dataset","Choose Data to Use:",
-                            choices =list(penguins = "penguins", mtcars = "mtcars", 
-                                          uploaded_file = "inFile"), selected=NULL),
+                            choices =list(penguins = "penguins", mtcars = "mtcars"), selected=NULL),
               ),
               
               
@@ -370,49 +369,6 @@ ui <- dashboardPage(header, sidebar, body)
 
 server <-  function(input, output, session) {
   
-  # Update variables based on the data
-  observe({
-    if(!exists(input$dataset)) return() #make sure upload exists
-    var.opts<-colnames(get(input$dataset))
-    updateSelectInput(session, "x_var", choices = var.opts)
-    updateSelectInput(session, "y_var", choices = var.opts)
-    updateSelectInput(session, "group", choices = var.opts)
-    updateSelectInput(session, "var1", choices = var.opts)
-    updateSelectInput(session, "var2", choices = var.opts)
-    updateSelectInput(session, "response.var", choices = var.opts)
-    updateSelectInput(session, "independent.var", choices = var.opts)
-  })
-  
-  #get data object
-  get_data<-reactive({
-    
-    if(!exists(input$dataset)) return() # if no upload
-    
-    check<-function(x){is.null(x) || x==""}
-    if(check(input$dataset)) return()
-    
-    obj<-list(data=get(input$dataset),
-              x_var=input$x_var,
-              y_var=input$y_var,
-              group=input$group
-    )
-    
-    #require all to be set to proceed
-    if(any(sapply(obj,check))) return()
-    
-    #make sure choices had a chance to update
-    check<-function(obj){
-      !all(c(obj$x_var, obj$y_var, obj$group) %in% colnames(obj$data))
-    }
-    
-    if(check(obj)) return()
-    
-    
-    obj
-    
-  })
-  
-  
   # set uploaded file
   upload_data<-reactive({
     
@@ -429,18 +385,110 @@ server <-  function(input, output, session) {
   
   observeEvent(input$file1,{
     inFile<-upload_data()
+    
   })
   
   # Display any inputted data 
   
   observeEvent(input$file1, {
+    
+    inFile<-upload_data()
+    
     output$data_table <- renderDataTable({
       inFile
     })
   })
   
+  # 
   
+  observeEvent(input$file1, {
+    
+    inFile<-upload_data()
+    
+    updateSelectInput(session, "dataset", choices =list(penguins = "penguins", mtcars = "mtcars", 
+    uploaded_file = "inFile"), selected=NULL)
+    
+    })
+
+  # Update variables based on the data
+  observeEvent(input$dataset, {
+    
+    if(!exists(input$dataset)) return() #make sure upload exists
   
+    if(input$dataset == "mtcars" | input$dataset == "penguins"){
+    
+      var.opts<-colnames(get(input$dataset))
+      
+      updateSelectInput(session, "x_var", choices = var.opts)
+      updateSelectInput(session, "y_var", choices = var.opts)
+      updateSelectInput(session, "group", choices = var.opts)
+      updateSelectInput(session, "var1", choices = var.opts)
+      updateSelectInput(session, "var2", choices = var.opts)
+      updateSelectInput(session, "response.var", choices = var.opts)
+      updateSelectInput(session, "independent.var", choices = var.opts)
+      
+      }
+    
+    else if(input$dataset == "inFile"){
+      
+      inFile<-upload_data()
+      
+      var.opts<-colnames(inFile)
+      
+      updateSelectInput(session, "x_var", choices = var.opts)
+      updateSelectInput(session, "y_var", choices = var.opts)
+      updateSelectInput(session, "group", choices = var.opts)
+      updateSelectInput(session, "var1", choices = var.opts)
+      updateSelectInput(session, "var2", choices = var.opts)
+      updateSelectInput(session, "response.var", choices = var.opts)
+      updateSelectInput(session, "independent.var", choices = var.opts)
+      
+      }
+    })
+    
+  
+  #get data object
+  get_data<-reactive({
+    
+    if(!exists(input$dataset)) return() # if no upload
+    
+    check<-function(x){is.null(x) || x==""}
+    if(check(input$dataset)) return()
+    
+    if(input$dataset == "mtcars" | input$dataset == "penguins"){
+      
+    obj<-list(data=get(input$dataset),
+              x_var=input$x_var,
+              y_var=input$y_var,
+              group=input$group
+    )}
+    
+    else if(input$dataset == "inFile"){
+      
+      inFile<-upload_data()
+      
+      obj<-list(data=inFile,
+                x_var=input$x_var,
+                y_var=input$y_var,
+                group=input$group
+    )}
+    
+    #require all to be set to proceed
+    if(any(sapply(obj,check))) return()
+    
+    #make sure choices had a chance to update
+    check<-function(obj){
+      !all(c(obj$x_var, obj$y_var, obj$group) %in% colnames(obj$data))
+    }
+    
+    if(check(obj)) return()
+    
+    
+    obj
+    
+  })
+  
+
   #plotting function using ggplot2
   p <- reactive({
     
@@ -487,7 +535,13 @@ server <-  function(input, output, session) {
     } 
     
     else if(input$class_x == "Categorical" && input$class_y == "Continuous" && input$both_plots == "Boxplot") {
-      ggplot(plot.obj$data,
+      
+      
+      factorData <- plot.obj$data
+
+      factorData[[input$x_var]] <- as.factor(factorData[[input$x_var]])
+    
+      ggplot(factorData,
              aes_string(
                x 		= plot.obj$x_var,
                y 		= plot.obj$y_var)) + 
