@@ -511,7 +511,12 @@ server <-  function(input, output, session) {
       }
       
       else if(input$class_x == "Categorical" && input$class_y == "Categorical") {
-        ggplot(plot.obj$data,
+        
+        factorData <- plot.obj$data
+        factorData[[input$x_var]] <- as.factor(factorData[[input$x_var]])
+        factorData[[input$y_var]] <- as.factor(factorData[[input$y_var]])
+        
+        ggplot(factorData,
                aes_string(
                  x 		= plot.obj$x_var,
                  fill 	= plot.obj$y_var)) + 
