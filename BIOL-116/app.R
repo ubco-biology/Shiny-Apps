@@ -447,143 +447,131 @@ server <-  function(input, output, session) {
     })
     
   
-  #get data object
-  get_data<-reactive({
-    
-    if(!exists(input$dataset)) return() # if no upload
-    
-    check<-function(x){is.null(x) || x==""}
-    if(check(input$dataset)) return()
-    
-    if(input$dataset == "mtcars" | input$dataset == "penguins"){
-      
-    obj<-list(data=get(input$dataset),
-              x_var=input$x_var,
-              y_var=input$y_var,
-              group=input$group
-    )}
-    
-    else if(input$dataset == "inFile"){
+    #get data object
+    get_data<-reactive({
       
       inFile<-upload_data()
       
-      obj<-list(data=inFile,
-                x_var=input$x_var,
-                y_var=input$y_var,
-                group=input$group
-    )}
-    
-    #require all to be set to proceed
-    if(any(sapply(obj,check))) return()
-    
-    #make sure choices had a chance to update
-    check<-function(obj){
-      !all(c(obj$x_var, obj$y_var, obj$group) %in% colnames(obj$data))
-    }
-    
-    if(check(obj)) return()
-    
-    
-    obj
-    
-  })
-  
-
-  #plotting function using ggplot2
-  p <- reactive({
-    
-    #get the data
-    plot.obj<-get_data()
-    
-    #conditions for plotting
-    if(is.null(plot.obj)) return()
-    
-    #make sure variables loaded
-    if(plot.obj$x_var == "" | plot.obj$y_var =="") return()
-    
-    #suppress error messages
-    req(input$x_var, input$class_x, input$y_var, input$class_y)
-    
-    #plot types
-    
-    if(input$class_x == "Continuous" && input$class_y == "Continuous") {
-      ggplot(plot.obj$data,
-             aes_string(
-               x 		= plot.obj$x_var,
-               y 		= plot.obj$y_var)) + 
-        geom_point(color='black',
-                   alpha=0.5, 
-                   position = 'jitter') +
-        geom_smooth(method='lm') +
-        .theme +
-        labs(x 		= input$x_var,
-             y 		= input$y_var)
-    }
-    
-    else if(input$class_x == "Categorical" && input$class_y == "Categorical") {
-      ggplot(plot.obj$data,
-             aes_string(
-               x 		= plot.obj$x_var,
-               fill 	= plot.obj$y_var)) + 
-        geom_mosaic(aes(x = product(!!sym(plot.obj$x_var)), fill = !!sym(plot.obj$y_var))) +
-        scale_y_continuous(breaks = seq(0, 1, by = 0.2)) +
-        .theme +
-        labs(
-          fill 	= input$y_var,
-          x 		= input$x_var,
-          y 		= "Relative frequency")
-    } 
-    
-    else if(input$class_x == "Categorical" && input$class_y == "Continuous" && input$both_plots == "Boxplot") {
+      if(!exists(input$dataset)) return() # if no upload
       
-      factorData <- plot.obj$data
-      factorData[[input$x_var]] <- as.factor(factorData[[input$x_var]])
+      check<-function(x){is.null(x) || x==""}
+      if(check(input$dataset)) return()
+        
+        obj<-list(data=get(input$dataset),
+                  x_var=input$x_var,
+                  y_var=input$y_var,
+                  group=input$group)
     
-      ggplot(factorData,
-             aes_string(
-               x 		= plot.obj$x_var,
-               y 		= plot.obj$y_var)) + 
-        geom_boxplot(width = 0.5, fill = "lightgrey") +
-        stat_summary(fun.data = confint.fun.ttest, geom = "errorbar", 
-                     colour = "black", width = 0.07, 
-                     position = position_nudge(x = 0.4)) +
-        stat_summary(fun = mean, 
-                     geom = "point", 
-                     colour = "firebrick", 
-                     size = 2, 
-                     position = position_nudge(x = 0.4)) +
-        .theme +
-        labs(x 		= input$x_var,
-             y 		= input$y_var)
-    }
-    
-    else if(input$class_x == "Categorical" && input$class_y == "Continuous" && input$both_plots == "Stripchart") {
       
-      factorData <- plot.obj$data
-      factorData[[input$x_var]] <- as.factor(factorData[[input$x_var]])
+      #require all to be set to proceed
+      if(any(sapply(obj,check))) return()
       
-      ggplot(factorData,
-             aes_string(
-               x 		= plot.obj$x_var,
-               y 		= plot.obj$y_var)) + 
-        geom_jitter(shape = 1, 
-                    position = position_jitter(0.1)) + 
-        stat_summary(fun.data = confint.fun.ttest, geom = "errorbar", 
-                     colour = "black", width = 0.07, 
-                     position = position_nudge(x = 0.15)) +
-        stat_summary(fun = mean, 
-                     geom = "point", 
-                     colour = "firebrick", 
-                     size = 2, 
-                     position = position_nudge(x = 0.15)) +
-        .theme +
-        labs(x 		= input$x_var,
-             y 		= input$y_var)
-    }
+      #make sure choices had a chance to update
+      check<-function(obj){
+        !all(c(obj$x_var, obj$y_var, obj$group) %in% colnames(obj$data))
+      }
+      
+      if(check(obj)) return()
+      
+      
+      obj
+      
+    })
     
-  })
-  
-  output$p <- renderPlot({p()})
+    
+    #plotting function using ggplot2
+    p <- reactive({
+      
+      #get the data
+      plot.obj<-get_data()
+      
+      #conditions for plotting
+      if(is.null(plot.obj)) return()
+      
+      #make sure variables loaded
+      if(plot.obj$x_var == "" | plot.obj$y_var =="") return()
+      
+      #suppress error messages
+      req(input$x_var, input$class_x, input$y_var, input$class_y)
+      
+      #plot types
+      
+      if(input$class_x == "Continuous" && input$class_y == "Continuous") {
+        ggplot(plot.obj$data,
+               aes_string(
+                 x 		= plot.obj$x_var,
+                 y 		= plot.obj$y_var)) + 
+          geom_point(color='black',
+                     alpha=0.5, 
+                     position = 'jitter') +
+          geom_smooth(method='lm') +
+          .theme +
+          labs(x 		= input$x_var,
+               y 		= input$y_var)
+      }
+      
+      else if(input$class_x == "Categorical" && input$class_y == "Categorical") {
+        ggplot(plot.obj$data,
+               aes_string(
+                 x 		= plot.obj$x_var,
+                 fill 	= plot.obj$y_var)) + 
+          geom_mosaic(aes(x = product(!!sym(plot.obj$x_var)), fill = !!sym(plot.obj$y_var))) +
+          scale_y_continuous(breaks = seq(0, 1, by = 0.2)) +
+          .theme +
+          labs(
+            fill 	= input$y_var,
+            x 		= input$x_var,
+            y 		= "Relative frequency")
+      } 
+      
+      else if(input$class_x == "Categorical" && input$class_y == "Continuous" && input$both_plots == "Boxplot") {
+        
+        
+        factorData <- plot.obj$data
+        factorData[[input$x_var]] <- as.factor(factorData[[input$x_var]])
+        
+        ggplot(factorData,
+               aes_string(
+                 x 		= plot.obj$x_var,
+                 y 		= plot.obj$y_var)) + 
+          geom_boxplot(width = 0.5, fill = "lightgrey") +
+          stat_summary(fun.data = confint.fun.ttest, geom = "errorbar", 
+                       colour = "black", width = 0.07, 
+                       position = position_nudge(x = 0.4)) +
+          stat_summary(fun = mean, 
+                       geom = "point", 
+                       colour = "firebrick", 
+                       size = 2, 
+                       position = position_nudge(x = 0.4)) +
+          .theme +
+          labs(x 		= input$x_var,
+               y 		= input$y_var)
+      }
+      
+      else if(input$class_x == "Categorical" && input$class_y == "Continuous" && input$both_plots == "Stripchart") {
+        ggplot(plot.obj$data,
+               aes_string(
+                 x 		= plot.obj$x_var,
+                 y 		= plot.obj$y_var)) + 
+          geom_jitter(shape = 1, 
+                      position = position_jitter(0.1)) + 
+          stat_summary(fun.data = confint.fun.ttest, geom = "errorbar", 
+                       colour = "black", width = 0.07, 
+                       position = position_nudge(x = 0.15)) +
+          stat_summary(fun = mean, 
+                       geom = "point", 
+                       colour = "firebrick", 
+                       size = 2, 
+                       position = position_nudge(x = 0.15)) +
+          .theme +
+          labs(x 		= input$x_var,
+               y 		= input$y_var)
+      }
+      
+    })
+    
+    output$p <- renderPlot({p()})
+    
   
   # Saving the plot
   
@@ -682,6 +670,8 @@ ggplot(data) +
     
     #suppress error messages
     req(input$dataset, input$var1, input$class1, input$var2, input$class2)
+    
+    inFile<-upload_data()
     
     if(input$class1 == "Quantitative" && input$class2 == "Quantitative"){
       
@@ -807,6 +797,8 @@ table(stats)"
     
     #suppress error messages
     req(input$dataset, input$response.var, input$independent.var, input$classr, input$classi)
+    
+    inFile<-upload_data()
     
     if(input$classr == "Quantitative" && input$classi == "Categorical" && input$categories == "two"){
       
