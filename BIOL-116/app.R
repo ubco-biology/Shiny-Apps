@@ -391,7 +391,7 @@ server <-  function(input, output, session) {
   # Display any inputted data 
   
   observeEvent(input$file1, {
-    
+     
     inFile<-upload_data()
     
     output$data_table <- renderDataTable({
@@ -411,9 +411,7 @@ server <-  function(input, output, session) {
     })
 
   # Update variables based on the data
-  observeEvent(input$dataset, {
-    
-    if(!exists(input$dataset)) return() #make sure upload exists
+  observe({
   
     if(input$dataset == "mtcars" | input$dataset == "penguins"){
     
@@ -427,9 +425,11 @@ server <-  function(input, output, session) {
       updateSelectInput(session, "response.var", choices = var.opts)
       updateSelectInput(session, "independent.var", choices = var.opts)
       
-      }
+    } 
+  })
+    observe({
     
-    else if(input$dataset == "inFile"){
+      if(input$dataset == "inFile"){
       
       inFile<-upload_data()
       
@@ -536,9 +536,7 @@ server <-  function(input, output, session) {
     
     else if(input$class_x == "Categorical" && input$class_y == "Continuous" && input$both_plots == "Boxplot") {
       
-      
       factorData <- plot.obj$data
-
       factorData[[input$x_var]] <- as.factor(factorData[[input$x_var]])
     
       ggplot(factorData,
@@ -560,7 +558,11 @@ server <-  function(input, output, session) {
     }
     
     else if(input$class_x == "Categorical" && input$class_y == "Continuous" && input$both_plots == "Stripchart") {
-      ggplot(plot.obj$data,
+      
+      factorData <- plot.obj$data
+      factorData[[input$x_var]] <- as.factor(factorData[[input$x_var]])
+      
+      ggplot(factorData,
              aes_string(
                x 		= plot.obj$x_var,
                y 		= plot.obj$y_var)) + 
