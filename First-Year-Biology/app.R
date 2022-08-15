@@ -38,7 +38,7 @@ confint.fun.ttest <- function(x, conf = 0.95){
 
 # title ----
 header <- dashboardHeader(
-  title = "BIOL 116 App"
+  title = "First Year Biology App"
   
 )
 
