@@ -427,7 +427,8 @@ server <-  function(input, output, session) {
       
     } 
   })
-    observe({
+  
+  observe({
     
       if(input$dataset == "inFile"){
       
@@ -454,7 +455,7 @@ server <-  function(input, output, session) {
       
       if(!exists(input$dataset)) return() # if no upload
       
-      check<-function(x){is.null(x) || x==""}
+      check<-function(x){is.null(x)}
       if(check(input$dataset)) return()
         
         obj<-list(data=get(input$dataset),
